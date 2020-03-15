@@ -1,171 +1,165 @@
-var express            =  require( 'express' );
-var http               =  require( 'http' );
-var bodyParser         =  require( 'body-parser' );
-var passport           =  require( 'passport' );
-var authController     =  require( './auth' );
-var authJwtController  =  require( './auth_jwt' );
-var jwt                =  require( 'jsonwebtoken' );
-var User               =  require( './user' );
-var Movie              =  require( './movie' );
-var userController     =  require( './usercontroller' );
-var movieController    =  require( './moviecontroller' );
-require( './db.js' );
+var express = require('express');
+var bodyParser = require('body-parser');
+var passport = require('passport');
+var authJwtController = require('./auth_jwt');
+var User = require('./Users');
+var Movie = require('./movies');
+var jwt = require('jsonwebtoken');
 
+var app = express();
+module.exports = app; // for testing
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
-var app  =  express( );
+app.use(passport.initialize());
 
-app.use( bodyParser.json( ) );
-app.use( bodyParser.urlencoded( { extended : false } ) );
+var router = express.Router();
 
-app.use( passport.initialize( ) );
-
-var router  =  express.Router( );
-
-
-
-function getMoviesJSONObject( req , msg )
-{
-    var json = {
-        status   :  200,
-        message  :  msg,
-        headers  :  "No Headers",
-        query    :  "No Query String",
-        env      :  process.env.UNIQUE_KEY
-    };
-
-    if ( req.query != null )
-        json.query  =  req.query;
-
-    if ( req.headers != null )
-        json.headers  =  req.headers;
-
-    return json;
-}
-
-function getJSONObject( req )
-{
-    var json = {
-        headers  :  "No Headers",
-        key      :  process.env.UNIQUE_KEY,
-        body     :  "No Body"
-    };
-
-    if ( req.body != null )
-        json.body  =  req.body;
-
-    if ( req.headers != null )
-        json.headers  =  req.headers;
-
-    return json;
-}
-
-// BadRoutes function
-function getBadRouteJSON( req , res , route )
-{
-    res.json(	{
-        success:  false,
-        msg:      req.method + " requests are not supported by " + route
-    });
-}
-
-
-router.route('/post')
-    .post(
-        authController.isAuthenticated,
-        function ( req , res )
-        {
-            console.log( req.body );
-            res  =  res.status( 200 );
-            if ( req.get( 'Content-Type' ) )
-            {
-                console.log( "Content-Type: " + req.get( 'Content-Type' ) );
-                res  =  res.type( req.get( 'Content-Type' ) );
+router.route('/postjwt')
+    .post(authJwtController.isAuthenticated, function (req, res) {
+            console.log(req.body);
+            res = res.status(200);
+            if (req.get('Content-Type')) {
+                console.log("Content-Type: " + req.get('Content-Type'));
+                res = res.type(req.get('Content-Type'));
             }
-            var o  =  getJSONObject( req );
-            res.json( o );
-        });
-
-router.route( '/postjwt' )
-    .post(
-        authJwtController.isAuthenticated,
-        function ( req , res )
-        {
-            console.log( req.body );
-            res  =  res.status( 200 );
-            if ( req.get( 'Content-Type' ) )
-            {
-                console.log( "Content-Type: " + req.get( 'Content-Type' ) );
-                res  =  res.type( req.get( 'Content-Type' ) );
-            }
-            res.send( req.body );
+            res.send(req.body);
         }
     );
 
-router.route( '/findallusers' )
-    .post( userController.findAllUsers );
+router.route('/users/:userId')
+    .get(authJwtController.isAuthenticated, function (req, res) {
+        var id = req.params.userId;
+        User.findById(id, function(err, user) {
+            if (err) res.send(err);
 
-router.route( '/signup' )
-    // POST
-    .post( userController.signUp )
-    // BadReqs
-    .all(
-        function( req , res )
-        {
-            getBadRouteJSON( req , res , "/signup" );
+            var userJson = JSON.stringify(user);
+            // return that user
+            res.json(user);
         });
-
-
-router.route( '/signin' )
-    // POST
-    .post( userController.signIn )
-    // BadReqs
-    .all(
-        function( req , res )
-        {
-            getBadRouteJSON( req , res , "/signin" );
-        });
-
-
-router.route( '/movies' )
-    // GET
-    .get(
-        authJwtController.isAuthenticated,
-        movieController.getMovies
-    )
-    // POST
-    .post(
-        authJwtController.isAuthenticated,
-        movieController.postMovie
-    )
-    // PUT
-    .put(
-        authJwtController.isAuthenticated,
-        movieController.putMovie
-    )
-    // DELETE
-    .delete(
-        authJwtController.isAuthenticated,
-        movieController.deleteMovie
-    )
-    // BadReqs
-    .all(
-        function( req , res )
-        {
-            getBadRouteJSON( req , res , "/movies" );
-        });
-
-// === ATTEMPT TO ROUTE REQUEST === //
-app.use( '/' , router );
-
-// === IF UNEXPEDTED ROUTE IS SENT, REJECT IT HERE === //
-app.use(
-    function( req , res )
-    {
-        getBadRouteJSON( req , res , "this URL path" );
     });
 
-// === LISTEN ON THE ENVIRONMENT PORT OR 8080 === //
-app.listen( process.env.PORT || 8080 );
+router.route('/users')
+    .get(authJwtController.isAuthenticated, function (req, res) {
+        User.find(function (err, users) {
+            if (err) res.send(err);
+            // return the users
+            res.json(users);
+        });
+    });
 
-// === EXPORT APP FOR TESTS === //
-module.exports  =  app; // for testing
+router.route('/movies')
+    .get(authJwtController.isAuthenticated, function (req, res) {
+        Movie.find(function (err, movies) {
+            if (err) res.send(err);
+            // return the users
+            res.json(movies);
+        });
+    });
+
+router.post('/signup', function(req, res) {
+    if (!req.body.username || !req.body.password) {
+        res.json({success: false, message: 'Please pass username and password.'});
+    }
+    else {
+        var user = new User();
+        user.name = req.body.name;
+        user.username = req.body.username;
+        user.password = req.body.password;
+        // save the user
+        user.save(function(err) {
+            if (err) {
+                // duplicate entry
+                if (err.code == 11000)
+                    return res.json({ success: false, message: 'A user with that username already exists. '});
+                else
+                    return res.send(err);
+            }
+
+            res.json({ success: true, message: 'User created!' });
+        });
+    }
+});
+
+router.post('/signin', function(req, res) {
+    var userNew = new User();
+    userNew.name = req.body.name;
+    userNew.username = req.body.username;
+    userNew.password = req.body.password;
+
+    User.findOne({ username: userNew.username }).select('name username password').exec(function(err, user) {
+        if (err) res.send(err);
+
+        user.comparePassword(userNew.password, function(isMatch){
+            if (isMatch) {
+                var userToken = {id: user._id, username: user.username};
+                var token = jwt.sign(userToken, process.env.SECRET_KEY);
+                res.json({success: true, token: 'JWT ' + token});
+            }
+            else {
+                res.status(401).send({success: false, message: 'Authentication failed.'});
+            }
+        });
+
+
+    });
+});
+
+router.get('/Movies', function(req,res){
+    Movie.find({},function(err, Movies){
+        if(!Movie)
+            return res.json({ success: false, message: 'There are no movies in the database'});
+        res.json({ success: true, message: 'All Movies' });
+
+    });
+});
+
+router.post('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
+    if (!req.body.title || !req.body.released || !req.body.genre) {
+        res.json({success: false, message: 'Pass the title, year of release, and a specified genre'});
+    }
+    else {
+        var movie = new Movie();
+        movie.title = req.body.title;
+        movie.released = req.body.released;
+        movie.genre = req.body.genre;
+        movie.actors = req.body.actors;
+        // movie.actors.charName = req.body.actors;
+
+        // save the movie
+        movie.save(function(err) {
+            if(err) return res.send(err);
+            res.json({ success: true, message: 'Movie saved' });
+        });
+    }
+});
+
+router.put('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
+    //var movie = new Movie();
+    // movie.title = req.body.title;
+
+    Movie.findOne({title:req.body.title},function(err,movie){
+        if(err) res.send(err);
+
+        movie.released = req.body.released;
+        movie.genre = req.body.genre;
+        movie.actors = req.body.actors;
+
+        movie.save(function (err) {
+            if (err) return res.send(err);
+            res.json({success: true, message: 'Movie updated'});
+        });
+    });
+});
+
+router.delete('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
+    Movie.findOne({title:req.body.title},function(err,movie) {
+        if (err) res.send(err);
+
+        movie.remove({title:req.body.title});
+        res.json({success: true, message: 'Movie deleted'});
+    });
+});
+
+app.use('/', router);
+app.listen(process.env.PORT || 8080);
