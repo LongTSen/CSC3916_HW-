@@ -97,5 +97,70 @@ router.post('/signin', function(req, res) {
     });
 });
 
+router.route('/movies')
+    .get(authJwtController.isAuthenticated, function (req, res) {
+        Movie.find(function (err, movies) {
+            if (err) res.send(err);
+            // return the users
+            res.json(movies);
+        });
+    });
+
+router.get('/Movies', function(req,res){
+    Movie.find({},function(err, Movies){
+        if(!Movie)
+            return res.json({ success: false, message: 'There are no movies in the database'});
+        res.json({ success: true, message: 'All Movies' });
+
+    });
+});
+
+router.post('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
+    if (!req.body.title || !req.body.released || !req.body.genre) {
+        res.json({success: false, message: 'Pass the title, year of release, and a specified genre'});
+    }
+    else {
+        var movie = new Movie();
+        movie.title = req.body.title;
+        movie.released = req.body.released;
+        movie.genre = req.body.genre;
+        movie.actors = req.body.actors;
+        // movie.actors.charName = req.body.actors;
+
+        // save the movie
+        movie.save(function(err) {
+            if(err) return res.send(err);
+            res.json({ success: true, message: 'Movie saved' });
+        });
+    }
+});
+
+router.put('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
+    //var movie = new Movie();
+    // movie.title = req.body.title;
+
+    Movie.findOne({title:req.body.title},function(err,movie){
+        if(err) res.send(err);
+
+        movie.released = req.body.released;
+        movie.genre = req.body.genre;
+        movie.actors = req.body.actors;
+
+        movie.save(function (err) {
+            if (err) return res.send(err);
+            res.json({success: true, message: 'Movie updated'});
+        });
+    });
+});
+
+router.delete('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
+    Movie.findOne({title:req.body.title},function(err,movie) {
+        if (err) res.send(err);
+
+        movie.remove({title:req.body.title});
+        res.json({success: true, message: 'Movie deleted'});
+    });
+});
+
 app.use('/', router);
 app.listen(process.env.PORT || 8080);
