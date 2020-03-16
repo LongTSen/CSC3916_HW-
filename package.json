@@ -4,7 +4,7 @@
   "description": "week7a",
   "main": "server.js",
   "scripts": {
-    "test": "mocha --timeout 10000 --exit",
+    "test": "mocha --timeout 10000 --exit"
   },
   "author": "Shawn McCarthy",
   "license": "ISC",

@@ -202,4 +202,4 @@ router.delete('/Movies',passport.authenticate('jwt',{session : false}),function(
 });
 
 app.use('/', router);
-// app.listen(process.env.PORT || 8080);
+app.listen(process.env.PORT || 8080);
