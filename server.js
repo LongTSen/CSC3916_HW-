@@ -97,7 +97,7 @@ router.post('/signin', function(req, res) {
             if (isMatch) {
                 var userToken = {id: user._id, username: user.username};
                 var token = jwt.sign(userToken, process.env.SECRET_KEY);
-                res.json({success: true, token: 'JWT ' + token});
+                res.json({success: true,username:user.username, token: 'JWT ' + token});
             }
             else {
                 res.status(401).send({success: false, message: 'Authentication failed.'});
@@ -116,6 +116,28 @@ router.get('/Movies', function(req,res){
 
     });
 });
+
+router.route('/movie')
+    .get(authJwtController.isAuthenticated, function (req, res) {
+        var movieTitle = req.query.title;
+        console.log('Movie Title: ' + movieTitle);
+        Movie.findOne({title : movieTitle}).exec(function (err, movie) {
+                if (err) res.send(err);
+
+                console.log('Movie ' + movie);
+                if (movie == null) {
+                    res.status(400);
+                    res.send('No movie found');
+                }
+                else{
+                    res.status(200).jsonp(movie);
+                }
+
+            }
+
+        );
+
+    });
 
 router.post('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
     if (!req.body.title || !req.body.released || !req.body.genre) {
