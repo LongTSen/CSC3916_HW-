@@ -186,7 +186,8 @@ router.put('/Movies',passport.authenticate('jwt',{session : false}),function(req
 
         movie.save(function (err) {
             if (err) return res.send(err);
-            res.json({success: true, message: 'Movie updated'});
+            // res.json({success: true, message: 'Movie updated'});
+            res.status(200).json(movie);
         });
     });
 });
@@ -196,7 +197,7 @@ router.delete('/Movies',passport.authenticate('jwt',{session : false}),function(
         if (err) res.send(err);
 
         movie.remove({title:req.body.title});
-        res.json({success: true, message: 'Movie deleted'});
+        res.json({success: true, message: 'Movie Deleted'});
     });
 });
 
