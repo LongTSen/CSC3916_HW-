@@ -132,9 +132,7 @@ router.route('/movie')
                 else{
                     res.status(200).jsonp(movie);
                 }
-
             }
-
         );
 
     });
@@ -159,13 +157,29 @@ router.post('/Movies',passport.authenticate('jwt',{session : false}),function(re
     }
 });
 
-router.put('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
-    //var movie = new Movie();
-    // movie.title = req.body.title;
+// router.put('/Movies',passport.authenticate('jwt',{session : false}),function(req,res){
+//     //var movie = new Movie();
+//     // movie.title = req.body.title;
+//
+//     Movie.findOne({title:req.body.title},function(err,movie){
+//         if(err) res.send(err);
+//
+//         movie.released = req.body.released;
+//         movie.genre = req.body.genre;
+//         movie.actors = req.body.actors;
+//
+//         movie.save(function (err) {
+//             if (err) return res.send(err);
+//             res.json({success: true, message: 'Movie updated'});
+//         });
+//     });
+// });
 
-    Movie.findOne({title:req.body.title},function(err,movie){
-        if(err) res.send(err);
-
+router.put('/Movies',passport.authenticate('jwt',{session : false}),function(req,res) {
+    var movieTitle = req.query.title;
+    console.log('Movie Title: ' + movieTitle);
+    Movie.findOne({title: movieTitle}).exec(function (err, movie) {
+        if (err) res.send(err);
         movie.released = req.body.released;
         movie.genre = req.body.genre;
         movie.actors = req.body.actors;
